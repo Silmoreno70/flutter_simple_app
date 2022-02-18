@@ -2,7 +2,7 @@
 
 import 'dart:async';
 import 'dart:developer';
-import 'dart:ffi';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:graphql/client.dart' as graphql;
@@ -65,7 +65,49 @@ class Album {
   }
 }
 
-void main() => runApp(const MyApp());
+void main() => runApp(Nav2App());
+
+class Nav2App extends StatelessWidget {
+  const Nav2App({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      routes: {
+        '/': (context) => HomeScreen(),
+        '/details': (context) => MyApp(),
+      },
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Home'),
+      ),
+      body: Center(
+        child: MaterialButton(
+          color: Colors.green,
+          child: Text(
+            'Ver pokemones',
+            style: TextStyle(color: Colors.white),
+          ),
+          onPressed: () {
+            Navigator.pushNamed(
+              context,
+              '/details',
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
 
 class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -105,61 +147,119 @@ class _MyAppState extends State<MyApp> {
   Widget _buildCard(Album album) {
     final alreadySaved =
         futureAlbumFavorites.any((element) => element.id == album.id);
-    return Card(
-      elevation: 10,
-      child: Column(
-        children: <Widget>[
-          ListTile(
-            leading: CircleAvatar(
-              radius: 30.0,
-              backgroundImage: NetworkImage(
-                  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${album.id.toString()}.png'),
-              backgroundColor: Colors.transparent,
-            ),
-            title: Text(album.name),
-            subtitle: Row(
-              children: [
-                Row(
-                  children: <Widget>[
-                    for (var type in album.type) _builChip(type)
-                  ],
-                )
-              ],
-            ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Text('#' + album.id.toString()),
-                IconButton(
-                  iconSize: 18,
-                  padding: EdgeInsets.all(0),
-                  visualDensity: VisualDensity.compact,
-                  icon: (Icon(
-                    alreadySaved ? Icons.favorite : Icons.favorite_border,
-                    color: alreadySaved
-                        ? Color.fromARGB(255, 255, 0, 119)
-                        : Colors.grey,
-                  )),
-                  onPressed: () {
-                    setState(() {
-                      if (alreadySaved) {
-                        futureAlbumFavorites.remove(album);
-                      } else {
-                        futureAlbumFavorites.add(album);
-                      }
-                      log(futureAlbumFavorites.toString());
-                    });
-                  },
+    return GestureDetector(
+      onTap: () => _buildDialog(album),
+      child: Card(
+        elevation: 10,
+        child: Padding(
+          padding: EdgeInsets.all(5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              ListTile(
+                leading: CircleAvatar(
+                  radius: 30.0,
+                  backgroundImage: NetworkImage(
+                      'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${album.id.toString()}.png'),
+                  backgroundColor: Colors.transparent,
                 ),
-              ],
-            ),
+                title: Text(album.name),
+                subtitle: Row(
+                  children: [
+                    Row(
+                      children: <Widget>[
+                        for (var type in album.type) _builChip(type)
+                      ],
+                    )
+                  ],
+                ),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text('#' + album.id.toString()),
+                    SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: IconButton(
+                        iconSize: 18,
+                        padding: EdgeInsets.all(0),
+                        visualDensity: VisualDensity.compact,
+                        icon: (Icon(
+                          alreadySaved ? Icons.favorite : Icons.favorite_border,
+                          color: alreadySaved
+                              ? Color.fromARGB(255, 255, 0, 119)
+                              : Colors.grey,
+                        )),
+                        onPressed: () {
+                          setState(() {
+                            if (alreadySaved) {
+                              futureAlbumFavorites.remove(album);
+                            } else {
+                              futureAlbumFavorites.add(album);
+                            }
+                            log(futureAlbumFavorites.toString());
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
+  Future<void> _buildDialog(Album poke) async {
+    return showDialog<void>(
+        context: context,
+        barrierDismissible: false, // user must tap button!
+        builder: (BuildContext context) {
+          return AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: window.physicalSize.width,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        icon: Icon(Icons.close),
+                      )
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 300,
+                  child: CircleAvatar(
+                    radius: 300.0,
+                    backgroundImage: NetworkImage(
+                        'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${poke.id.toString()}.png'),
+                    backgroundColor: Colors.transparent,
+                  ),
+                )
+              ],
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text('Cerrar'))
+            ],
+            actionsAlignment: MainAxisAlignment.center,
+          );
+        });
+  }
+
   Widget _builChip(String type) {
+    Color calculateTextColor(Color background) {
+      return background.computeLuminance() >= 0.5 ? Colors.black : Colors.white;
+    }
+
     Map<String, dynamic> _colors = {
       'grass': '7BC45B',
       'electric': 'FACD55',
@@ -181,18 +281,22 @@ class _MyAppState extends State<MyApp> {
       'dragon': '816FEB'
     };
     Color color = Color(int.parse('0xFF${_colors[type]}'));
+    Color colorAccent = Colors.black45;
+    Color textColor = calculateTextColor(color);
     return SizedBox(
-      height: 20,
+      height: 30,
+      width: 80,
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 2, horizontal: 10),
         margin: EdgeInsets.only(right: 2),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.all(Radius.circular(20)),
-          color: color,
-        ),
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+            color: color,
+            border: Border.all(color: colorAccent, width: 2)),
         child: Text(
           type,
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -213,7 +317,18 @@ class _MyAppState extends State<MyApp> {
         ),
         home: Scaffold(
             appBar: AppBar(
-              title: const Text('Fetch Data Example'),
+              title: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  BackButton(
+                    color: Colors.white,
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  Text('Pokedex'),
+                ],
+              ),
             ),
             body: Column(
                 mainAxisSize: MainAxisSize.min,
